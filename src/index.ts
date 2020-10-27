@@ -1,24 +1,22 @@
 import "reflect-metadata";
-import { createConnection } from "typeorm";
-import { ToDo } from "./entity/ToDo";
 import { app } from "./root";
+import { createConnection } from "typeorm";
+import * as plugin from "fastify-typeorm-plugin";
+import { ToDo } from "./entity/ToDo";
 
 createConnection()
-  .then(async (connection) => {
-    console.log("Inserting a new user into the database...");
-    const todo = new ToDo();
-    todo.title = "TODO";
-    todo.description = "My first todo";
-    await connection.manager.save(todo);
-    console.log("Saved a new todo with id: " + todo.id);
+  .then((connection) => {
+    const startFetch = async () => {
+      console.log("Loading users from the database...");
+      const todos = await connection.manager.find(ToDo);
+      console.log("Loaded users: ", todos);
 
-    console.log("Loading users from the database...");
-    const todos = await connection.manager.find(ToDo);
-    console.log("Loaded users: ", todos);
-
-    console.log("Here you can setup and run express/koa/any other framework.");
+      console.log("Here you can setup and run express/koa/any other framework.");
+    };
+    startFetch();
+    app.register(plugin, {
+      connection,
+    });
+    app.listen(3030);
   })
   .catch((error) => console.log(error));
-
-
-app.listen(3030);
