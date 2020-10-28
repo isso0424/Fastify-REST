@@ -91,7 +91,7 @@ app.post("/todo", postOpts, async (request, reply) => {
   };
   const parameters = parseBody();
   if (parameters.error != null)
-    return await reply.code(400).send(parameters.error);
+    return await reply.code(400).send({ error: parameters.error });
 
   const todo = new ToDo();
   todo.title = parameters.title;
@@ -100,4 +100,73 @@ app.post("/todo", postOpts, async (request, reply) => {
   const repository = app.orm.getRepository(ToDo);
   await repository.save([todo]);
   await reply.code(200).send({ created: { ...todo } });
+});
+
+const putOpts: RouteShorthandOptions = {
+  schema: {
+    body: {
+      title: { type: "string" },
+      description: { type: "string" },
+    },
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          updated: {
+            type: "object",
+            properties: {
+              id: {
+                type: "number",
+              },
+              title: {
+                type: "string",
+              },
+              description: {
+                type: "string",
+              },
+            },
+          },
+        },
+      },
+      400: {
+        error: {
+          type: "string",
+        },
+      },
+    },
+  },
+};
+
+app.put("/todo/:id", putOpts, async (request, reply) => {
+  const params = request.params as Record<string, string>;
+  if (params.id == null)
+    return await reply.code(400).send({ error: "id is necessary" });
+
+  const parseBody = (): Record<string, string> => {
+    const body = request.body as Record<string, string>;
+    if (body.title == null && body.description == null)
+      return { error: "missing parameter" };
+    return {
+      title: body.title,
+      description: body.description,
+    };
+  };
+  const parameters = parseBody();
+  if (parameters.error != null)
+    return await reply.code(400).send({ error: parameters.error });
+
+  const new_parameters: Record<string, string> = {};
+  if (parameters.title != null) new_parameters.title = parameters.title;
+  if (parameters.description != null)
+    new_parameters.description = parameters.description;
+
+  const repository = app.orm.getRepository(ToDo);
+  const id = parseInt(params.id);
+  if (isNaN(id))
+    return await reply.code(400).send({ error: "id should be integer" });
+  repository.update(id, new_parameters);
+
+  const todo = await repository.findOne(id);
+  console.log(todo);
+  await reply.code(200).send({ updated: { ...todo } });
 });
