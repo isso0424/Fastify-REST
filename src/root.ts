@@ -16,7 +16,21 @@ const opts: RouteShorthandOptions = {
         type: "object",
         properties: {
           pong: {
-            type: "string",
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                id: {
+                  type: "number",
+                },
+                title: {
+                  type: "string",
+                },
+                description: {
+                  type: "string",
+                },
+              },
+            },
           },
         },
       },
@@ -24,9 +38,10 @@ const opts: RouteShorthandOptions = {
   },
 };
 
-app.get("/", opts, async (request, reply) => {
-  const todos = app.orm.getRepository(ToDo);
-  const todo = await todos.findByIds([1]);
-  console.log(todo);
-  reply.code(200).send(todo);
+app.get("/todo", opts, async (request, reply) => {
+  const todos = await app.orm.getRepository(ToDo).find();
+  console.log(JSON.stringify(todos));
+  await reply.code(200).send({
+    pong: todos,
+  });
 });
