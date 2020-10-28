@@ -71,37 +71,6 @@ const postOpts: RouteShorthandOptions = {
   },
 };
 
-app.get("/todo", getOpts, async (request, reply) => {
-  const todos = await app.orm.getRepository(ToDo).find();
-  console.log(JSON.stringify(todos));
-  await reply.code(200).send({
-    pong: todos,
-  });
-});
-
-app.post("/todo", postOpts, async (request, reply) => {
-  const parseBody = (): Record<string, string> => {
-    const body = request.body as Record<string, string>;
-    if (body.title == null || body.description == null)
-      return { error: "missing parameter" };
-    return {
-      title: body.title,
-      description: body.description,
-    };
-  };
-  const parameters = parseBody();
-  if (parameters.error != null)
-    return await reply.code(400).send({ error: parameters.error });
-
-  const todo = new ToDo();
-  todo.title = parameters.title;
-  todo.description = parameters.description;
-
-  const repository = app.orm.getRepository(ToDo);
-  await repository.save([todo]);
-  await reply.code(200).send({ created: { ...todo } });
-});
-
 const putOpts: RouteShorthandOptions = {
   schema: {
     body: {
@@ -137,6 +106,68 @@ const putOpts: RouteShorthandOptions = {
   },
 };
 
+const deleteOpts: RouteShorthandOptions = {
+  schema: {
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          deleted: {
+            type: "object",
+            properties: {
+              id: {
+                type: "number",
+              },
+              title: {
+                type: "string",
+              },
+              description: {
+                type: "string",
+              },
+            },
+          },
+        },
+      },
+      400: {
+        error: {
+          type: "string",
+        },
+      },
+    },
+  },
+};
+
+app.get("/todo", getOpts, async (request, reply) => {
+  const todos = await app.orm.getRepository(ToDo).find();
+  console.log(JSON.stringify(todos));
+  await reply.code(200).send({
+    pong: todos,
+  });
+});
+
+app.post("/todo", postOpts, async (request, reply) => {
+  const parseBody = (): Record<string, string> => {
+    const body = request.body as Record<string, string>;
+    if (body.title == null || body.description == null)
+      return { error: "missing parameter" };
+    return {
+      title: body.title,
+      description: body.description,
+    };
+  };
+  const parameters = parseBody();
+  if (parameters.error != null)
+    return await reply.code(400).send({ error: parameters.error });
+
+  const todo = new ToDo();
+  todo.title = parameters.title;
+  todo.description = parameters.description;
+
+  const repository = app.orm.getRepository(ToDo);
+  await repository.save([todo]);
+  await reply.code(200).send({ created: { ...todo } });
+});
+
 app.put("/todo/:id", putOpts, async (request, reply) => {
   const params = request.params as Record<string, string>;
   if (params.id == null)
@@ -161,7 +192,7 @@ app.put("/todo/:id", putOpts, async (request, reply) => {
     new_parameters.description = parameters.description;
 
   const repository = app.orm.getRepository(ToDo);
-  const id = parseInt(params.id);
+  const id = Number(params.id);
   if (isNaN(id))
     return await reply.code(400).send({ error: "id should be integer" });
   repository.update(id, new_parameters);
@@ -169,4 +200,21 @@ app.put("/todo/:id", putOpts, async (request, reply) => {
   const todo = await repository.findOne(id);
   console.log(todo);
   await reply.code(200).send({ updated: { ...todo } });
+});
+
+app.delete("/todo/:id", deleteOpts, async (request, reply) => {
+  const params = request.params as Record<string, string>;
+  if (params.id == null)
+    return await reply.code(400).send({ error: "id is necessary" });
+  const id = Number(params.id);
+  if (isNaN(id))
+    return await reply.code(400).send({ error: "id should be integer" });
+
+  const repository = app.orm.getRepository(ToDo);
+  const todo = await repository.findOne(id);
+  if (todo == null)
+    await reply.code(404).send({ error: `id ${id} is not found` });
+  await repository.delete(id);
+
+  await reply.code(200).send({ deleted: { ...todo } });
 });
