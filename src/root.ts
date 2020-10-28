@@ -38,6 +38,27 @@ const getOpts: RouteShorthandOptions = {
   },
 };
 
+const getByIdOpts: RouteShorthandOptions = {
+  schema: {
+    response: {
+      200: {
+        type: "object",
+        properties: {
+          id: {
+            type: "number",
+          },
+          title: {
+            type: "string",
+          },
+          description: {
+            type: "string",
+          },
+        },
+      },
+    },
+  },
+};
+
 const postOpts: RouteShorthandOptions = {
   schema: {
     body: {
@@ -143,6 +164,22 @@ app.get("/todo", getOpts, async (request, reply) => {
   await reply.code(200).send({
     pong: todos,
   });
+});
+
+app.get("/todo/:id", getByIdOpts, async (request, reply) => {
+  const params = request.params as Record<string, string>;
+  if (params.id == null)
+    return await reply.code(400).send({ error: "id is necessary" });
+  const id = Number(params.id);
+  if (isNaN(id))
+    return await reply.code(400).send({ error: "id should be integer" });
+
+  const repository = app.orm.getRepository(ToDo);
+  const todo = await repository.findOne(id);
+  if (todo == null)
+    await reply.code(404).send({ error: `id ${id} is not found` });
+
+  await reply.code(200).send({ ...todo });
 });
 
 app.post("/todo", postOpts, async (request, reply) => {
