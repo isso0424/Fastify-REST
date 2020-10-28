@@ -1,5 +1,5 @@
 import "reflect-metadata";
-import { app } from "./route";
+import { app } from "./server/route";
 import { createConnection } from "typeorm";
 import * as plugin from "fastify-typeorm-plugin";
 import { ToDo } from "./entity/ToDo";
